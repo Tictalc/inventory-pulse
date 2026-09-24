@@ -11,6 +11,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Shell } from "@/components/copilot/Shell";
+import { OpportunityDrawer } from "@/components/copilot/OpportunityDrawer";
+import { CopilotProvider } from "@/lib/copilot/store";
 
 function NotFoundComponent() {
   return (
@@ -77,11 +80,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Inventory Copilot" },
+      { name: "description", content: "Network-aware replenishment intelligence (prototype)" },
+      { name: "author", content: "Inventory Copilot" },
+      { property: "og:title", content: "Inventory Copilot" },
+      { property: "og:description", content: "Network-aware replenishment intelligence (prototype)" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
@@ -119,8 +122,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <CopilotProvider>
+        <Shell>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </Shell>
+        <OpportunityDrawer />
+      </CopilotProvider>
     </QueryClientProvider>
   );
 }
