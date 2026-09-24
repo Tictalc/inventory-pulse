@@ -170,7 +170,10 @@ export function OpportunityDrawer() {
                   </div>
                 ) : null}
 
-                <DemandPulse prev={o.metrics.prevDaily * 7} current={o.metrics.expectedDemand} />
+                <DemandPulse
+                  prev={Math.round(o.metrics.prevDaily * 7)}
+                  current={o.metrics.expectedDemand}
+                />
 
                 <div>
                   <p className="pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">

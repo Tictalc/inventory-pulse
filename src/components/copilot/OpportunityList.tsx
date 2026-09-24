@@ -62,7 +62,7 @@ export function OpportunityList({
 
   return (
     <div className="panel divide-y divide-border overflow-hidden">
-      <div className="hidden grid-cols-[1.6fr_0.8fr_1fr_1.1fr_auto_1.5fr] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground lg:grid">
+      <div className="hidden grid-cols-[1.5fr_0.7fr_0.9fr_11.5rem_3.5rem_1.5fr] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground lg:grid">
         <span>SKU</span>
         <span>Category</span>
         <span>Store</span>
@@ -76,7 +76,7 @@ export function OpportunityList({
           <button
             key={o.rowId}
             onClick={() => select(o.rowId)}
-            className="group block w-full px-4 py-4 text-left transition-colors hover:bg-surface-2 sm:px-5 lg:grid lg:grid-cols-[1.6fr_0.8fr_1fr_1.1fr_auto_1.5fr] lg:items-center lg:gap-4"
+            className="group block w-full px-4 py-4 text-left transition-colors hover:bg-surface-2 sm:px-5 lg:grid lg:grid-cols-[1.5fr_0.7fr_0.9fr_11.5rem_3.5rem_1.5fr] lg:items-center lg:gap-4"
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{o.product.name}</p>
