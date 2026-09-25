@@ -89,47 +89,75 @@ const row = (
 });
 
 export const initialRows: InventoryRow[] = [
-  // HERO 1 — city rebalancing: Koramangala low + surging, Indiranagar excess
+  // SCENARIO A — city transfer: Koramangala low + surging, Indiranagar excess
   row("SG-AVX-01", "kor", 8, 18, 28),
   row("SG-AVX-01", "ind", 42, 20, 21),
   row("SG-AVX-01", "whf", 19, 14, 15),
   row("SG-AVX-01", "hsr", 24, 16, 17),
   row("SG-AVX-01", "jay", 16, 12, 12),
 
-  // HERO 2 — no local excess, warehouse covers it
-  row("FR-BLZ-11", "kor", 6, 20, 28),
-  row("FR-BLZ-11", "ind", 15, 22, 24),
-  row("FR-BLZ-11", "whf", 11, 16, 18),
-  row("FR-BLZ-11", "hsr", 9, 14, 15),
-  row("FR-BLZ-11", "jay", 13, 18, 19),
+  // SCENARIO B — warehouse replenishment: no city excess, warehouse has stock
+  row("LN-PRG-22", "kor", 9, 16, 24),
+  row("LN-PRG-22", "ind", 16, 18, 17),
+  row("LN-PRG-22", "hsr", 12, 13, 13),
 
-  // HERO 3 — supply constraint: nothing local, warehouse at zero
+  // SCENARIO C — supply constraint at ONE store; others healthy, no excess, warehouse 0
   row("LN-BLU-21", "kor", 5, 17, 23),
-  row("LN-BLU-21", "ind", 9, 15, 16),
-  row("LN-BLU-21", "whf", 7, 13, 14),
-  row("LN-BLU-21", "hsr", 6, 11, 13),
-  row("LN-BLU-21", "jay", 4, 12, 15),
+  row("LN-BLU-21", "ind", 18, 15, 16),
+  row("LN-BLU-21", "whf", 15, 13, 14),
+  row("LN-BLU-21", "jay", 16, 12, 13),
 
-  // Additional best sellers — mix of healthy and at-risk
-  row("SG-WFR-02", "kor", 34, 21, 22),
-  row("SG-WFR-02", "hsr", 10, 14, 21),
+  // SCENARIO D — healthy / stable, no action
+  row("FR-BLZ-11", "kor", 28, 20, 21),
+  row("FR-BLZ-11", "ind", 30, 22, 23),
+  row("FR-BLZ-11", "whf", 22, 16, 17),
+  row("FR-BLZ-11", "jay", 24, 18, 18),
+
+  // SCENARIO E — imbalance: HSR accelerating (not urgent), Whitefield heavy excess → monitor
+  row("SG-WFR-02", "hsr", 16, 14, 21),
   row("SG-WFR-02", "whf", 46, 18, 17),
-  row("SG-CLP-03", "ind", 12, 11, 16, 6),
+  row("SG-WFR-02", "kor", 34, 21, 22),
+
+  // Supporting mix
+  row("FR-RTR-12", "jay", 7, 12, 18), // second city transfer (from Koramangala)
+  row("FR-RTR-12", "kor", 38, 13, 13),
+  row("FR-AIR-14", "whf", 6, 15, 21), // second warehouse replenishment
+  row("FR-AIR-14", "kor", 18, 16, 16),
+  row("SG-CLP-03", "ind", 12, 14, 15, 6),
   row("SG-CLP-03", "jay", 31, 12, 12),
   row("SG-SPT-04", "whf", 27, 15, 16),
-  row("FR-RTR-12", "jay", 7, 12, 18),
-  row("FR-RTR-12", "kor", 38, 13, 13),
   row("FR-URB-13", "ind", 44, 20, 19),
   row("FR-URB-13", "hsr", 22, 17, 18),
-  row("FR-AIR-14", "whf", 6, 15, 21),
-  row("FR-AIR-14", "kor", 18, 16, 16),
   row("FR-HEX-15", "hsr", 29, 13, 12),
-  row("LN-PRG-22", "kor", 9, 16, 24),
-  row("LN-PRG-22", "ind", 41, 18, 17),
   row("LN-PHO-23", "jay", 25, 14, 14),
   row("LN-THN-24", "whf", 33, 19, 20),
   row("LN-THN-24", "hsr", 48, 21, 20),
 ];
+
+export type TransferRecord = {
+  id: string;
+  productName: string;
+  sourceStore: string;
+  destStore: string;
+  units: number;
+  when: string;
+  coverBefore: number;
+  coverAfter: number;
+  live?: boolean;
+};
+
+/** Synthetic history of completed city transfers (each one = a warehouse pull avoided). */
+export const seedTransfers: TransferRecord[] = [
+  { id: "h1", productName: "Urban Rect", sourceStore: "Indiranagar", destStore: "HSR Layout", units: 12, when: "Sep 24 · completed", coverBefore: 2.4, coverAfter: 7.1 },
+  { id: "h2", productName: "ThinEdge 1.67", sourceStore: "HSR Layout", destStore: "Jayanagar", units: 9, when: "Sep 23 · completed", coverBefore: 3.1, coverAfter: 7.6 },
+  { id: "h3", productName: "Wayfarer Noir", sourceStore: "Whitefield", destStore: "Koramangala", units: 14, when: "Sep 22 · completed", coverBefore: 1.9, coverAfter: 6.4 },
+  { id: "h4", productName: "Hexa Metal", sourceStore: "Jayanagar", destStore: "Indiranagar", units: 8, when: "Sep 21 · completed", coverBefore: 2.8, coverAfter: 7.0 },
+  { id: "h5", productName: "Sport Shield", sourceStore: "Koramangala", destStore: "Whitefield", units: 10, when: "Sep 20 · completed", coverBefore: 3.3, coverAfter: 8.0 },
+  { id: "h6", productName: "Photochromic Grey", sourceStore: "Indiranagar", destStore: "Jayanagar", units: 7, when: "Sep 19 · completed", coverBefore: 2.6, coverAfter: 6.9 },
+];
+
+/** Synthetic baseline of historical recommendations for the intervention metric. */
+export const historicalRecs = { auto: 34, assisted: 9, manual: 3 };
 
 /** Summary-only demo data for other cities. */
 export const otherCities = [

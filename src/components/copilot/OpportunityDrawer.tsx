@@ -115,7 +115,7 @@ export function OpportunityDrawer() {
   const status = o ? (statuses[o.rowId] ?? "open") : "open";
 
   const ladder: "store" | "city" | "warehouse" | "exception" =
-    rec?.kind === "transfer"
+    rec?.kind === "transfer" || rec?.kind === "monitor"
       ? "city"
       : rec?.kind === "replenish"
         ? "warehouse"
@@ -245,6 +245,13 @@ export function OpportunityDrawer() {
                         {source.name} <ArrowRight className="h-4 w-4" /> {o.storeName}
                       </p>
                     </>
+                  ) : rec.kind === "monitor" && source ? (
+                    <>
+                      <p className="mt-2 text-2xl font-semibold">MONITOR · POTENTIAL REBALANCE</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        Up to {rec.qty} units {source.name} <ArrowRight className="h-4 w-4" /> {o.storeName} if the surge continues
+                      </p>
+                    </>
                   ) : rec.kind === "replenish" ? (
                     <>
                       <p className="mt-2 text-2xl font-semibold">REPLENISH {rec.qty} UNITS</p>
@@ -311,6 +318,10 @@ export function OpportunityDrawer() {
                   <Button className="flex-1" onClick={() => setConfirming(true)}>
                     Execute Warehouse Replenishment
                   </Button>
+                ) : rec.kind === "monitor" ? (
+                  <Button variant="secondary" className="flex-1" onClick={() => dismiss(o)}>
+                    Acknowledge · keep monitoring
+                  </Button>
                 ) : rec.kind === "constraint" ? (
                   <Button
                     variant="destructive"
@@ -323,7 +334,7 @@ export function OpportunityDrawer() {
                     Escalate / Flag
                   </Button>
                 ) : null}
-                {status === "open" && rec.kind !== "none" ? (
+                {status === "open" && rec.kind !== "none" && rec.kind !== "monitor" ? (
                   <Button variant="ghost" onClick={() => dismiss(o)}>
                     Dismiss
                   </Button>

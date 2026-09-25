@@ -22,7 +22,7 @@ export type SignalKind =
   | "supply_constraint"
   | "healthy";
 
-export type ActionKind = "transfer" | "replenish" | "none" | "constraint";
+export type ActionKind = "transfer" | "replenish" | "none" | "constraint" | "monitor";
 
 export type Confidence = "High" | "Medium" | "Low";
 
@@ -120,6 +120,44 @@ export function buildOpportunity(
   let rec: Recommendation;
 
   if (m.cover >= RISK_COVER || need <= 0) {
+    const monitorDonor =
+      m.accel >= SURGE_RATIO && m.cover < DONOR_KEEP_DAYS
+        ? peers.find((p) => p.surplus >= MIN_TRANSFER && p.cover >= DONOR_KEEP_DAYS + 2)
+        : undefined;
+    if (monitorDonor) {
+      const qty = Math.max(MIN_TRANSFER, Math.min(need, monitorDonor.surplus));
+      signals.push("network_imbalance");
+      rec = {
+        kind: "monitor",
+        qty,
+        sourceStoreId: monitorDonor.storeId,
+        reasons: [
+          `Demand accelerated ${Math.round((m.accel - 1) * 100)}% (${row.prevWeekUnits} → ${row.recentWeekUnits} units/week)`,
+          `${storeById(row.storeId).name} still holds ${m.cover} days of cover — above the ${RISK_COVER}-day risk threshold, so not urgent`,
+          `${monitorDonor.storeName} holds ${monitorDonor.cover} days of cover — ${monitorDonor.surplus} units above its own ${DONOR_KEEP_DAYS}-day need`,
+          `A ${qty}-unit rebalance is available if the surge continues`,
+        ],
+        confidence: "Medium",
+        alternative: "Immediate transfer was evaluated and deferred: current cover is adequate, so moving stock now would be premature.",
+        coverAfter: r1((row.stock + qty) / Math.max(0.1, m.recentDaily)),
+        sourceCoverAfter: r1((monitorDonor.stock - qty) / Math.max(0.1, monitorDonor.recentDaily)),
+      };
+      return {
+        rowId: row.id,
+        product,
+        storeId: row.storeId,
+        storeName: storeById(row.storeId).name,
+        category: product.category,
+        stock: row.stock,
+        inTransit: row.inTransit,
+        metrics: m,
+        signals,
+        primarySignal: "network_imbalance",
+        recommendation: rec,
+        warehouseStock,
+        peers,
+      };
+    }
     if (signals.length === 0) signals.push("healthy");
     rec = {
       kind: "none",
@@ -241,8 +279,32 @@ const PRIORITY: Record<ActionKind, number> = {
   constraint: 0,
   transfer: 1,
   replenish: 2,
-  none: 3,
+  monitor: 3,
+  none: 4,
 };
+
+/** Deterministic prototype tiers for the Human Intervention metric. */
+export type InterventionTier = "auto" | "assisted" | "manual";
+export function interventionTier(kind: ActionKind, confidence: Confidence): InterventionTier {
+  if (kind === "constraint") return "manual";
+  if (kind === "replenish" && confidence === "High") return "auto";
+  return "assisted";
+}
+
+/** Right-place: units within 14 days of local demand ÷ (tracked units + unmet 7-day shortfall). */
+export const RIGHT_PLACE_DAYS = 14;
+export function rightPlaceStats(opps: Opportunity[]) {
+  let total = 0;
+  let aligned = 0;
+  let shortfall = 0;
+  for (const o of opps) {
+    total += o.stock;
+    aligned += Math.min(o.stock, Math.round(o.metrics.recentDaily * RIGHT_PLACE_DAYS));
+    shortfall += Math.max(0, o.metrics.expectedDemand - o.stock - o.inTransit);
+  }
+  const pct = Math.round((aligned / Math.max(1, total + shortfall)) * 100);
+  return { total, aligned, excess: total - aligned, shortfall, pct };
+}
 
 export function sortOpportunities(list: Opportunity[]) {
   return [...list].sort(
