@@ -12,17 +12,20 @@ export function actionLabel(o: Opportunity) {
     return `Transfer ${r.qty} from ${storeById(r.sourceStoreId).name}`;
   if (r.kind === "replenish") return `Replenish ${r.qty} from Warehouse`;
   if (r.kind === "constraint") return "Escalate — supply constraint";
+  if (r.kind === "monitor" && r.sourceStoreId)
+    return `Monitor · rebalance up to ${r.qty} from ${storeById(r.sourceStoreId).name}`;
   return "No action needed";
 }
 
 function ActionIcon({ o }: { o: Opportunity }) {
   const k = o.recommendation.kind;
-  const Icon = k === "transfer" ? MoveRight : k === "replenish" ? Warehouse : Ban;
+  const Icon = k === "transfer" || k === "monitor" ? MoveRight : k === "replenish" ? Warehouse : Ban;
   return (
     <Icon
       className={cn(
         "h-4 w-4 shrink-0",
         k === "transfer" && "text-primary-glow",
+        k === "monitor" && "text-warning",
         k === "replenish" && "text-info",
         k === "constraint" && "text-destructive",
         k === "none" && "text-muted-foreground",
