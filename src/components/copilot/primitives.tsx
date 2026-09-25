@@ -70,12 +70,14 @@ export function KpiCard({
   sub,
   icon: Icon,
   accent,
+  onClick,
 }: {
   label: string;
   value: string | number;
   sub: string;
   icon: LucideIcon;
   accent?: "primary" | "warning" | "success" | "destructive";
+  onClick?: () => void;
 }) {
   const ring = {
     primary: "text-primary-glow bg-primary/15",
@@ -85,7 +87,11 @@ export function KpiCard({
   }[accent ?? "primary"];
 
   return (
-    <div className="panel relative overflow-hidden p-4 sm:p-5">
+    <button
+      type="button"
+      onClick={onClick}
+      className="panel relative block w-full overflow-hidden p-4 text-left transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
+    >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
           <p className="truncate text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -98,7 +104,7 @@ export function KpiCard({
         </span>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">{sub}</p>
-    </div>
+    </button>
   );
 }
 

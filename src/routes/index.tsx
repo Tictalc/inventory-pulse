@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AlertTriangle, Boxes, Radio, Warehouse } from "lucide-react";
 
+import { MetricDrawer, type MetricKey } from "@/components/copilot/MetricDrawer";
 import { ActivityFeed } from "@/components/copilot/ActivityFeed";
 import { OpportunityList } from "@/components/copilot/OpportunityList";
 import { CoverPill, DemoTag, KpiCard, SectionTitle } from "@/components/copilot/primitives";
@@ -40,6 +41,7 @@ function Overview() {
   const { opportunities, priority, metrics } = useCopilot();
   const [scope, setScope] = useState("bangalore");
   const [storeId, setStoreId] = useState(stores[0]!.id);
+  const [metric, setMetric] = useState<MetricKey | null>(null);
 
   const atRisk = opportunities.filter((o) => o.metrics.cover < RISK_COVER).length;
   const signals = opportunities.filter((o) => o.signals.includes("demand_surge")).length;
@@ -65,27 +67,31 @@ function Overview() {
           label="Best Sellers at Risk"
           value={atRisk}
           sub={`SKU-store pairs under ${RISK_COVER} days of cover`}
+          onClick={() => setMetric("risk")}
           icon={AlertTriangle}
           accent="destructive"
         />
         <KpiCard
           label="Demand Signals"
           value={signals}
-          sub="Velocity materially above previous period"
+          sub="Best sellers with accelerating demand"
+          onClick={() => setMetric("signals")}
           icon={Radio}
           accent="warning"
         />
         <KpiCard
           label="Network Opportunities"
           value={priority.length}
-          sub="Open recommendations awaiting a decision"
+          sub="Open actions across stores and warehouse"
+          onClick={() => setMetric("network")}
           icon={Boxes}
           accent="primary"
         />
         <KpiCard
           label="Avoided Warehouse Pulls"
           value={metrics.avoidedPulls}
-          sub="Satisfied through existing city inventory"
+          sub="Demand fulfilled through city inventory"
+          onClick={() => setMetric("avoided")}
           icon={Warehouse}
           accent="success"
         />
@@ -96,24 +102,32 @@ function Overview() {
           {
             label: "Right-Place Inventory",
             value: `${metrics.rightPlace}%`,
-            sub: "Best-seller inventory positioned where demand is expected",
+            sub: "Best-seller units positioned near expected demand",
+            key: "rightPlace" as const,
           },
           {
             label: "Avoided Warehouse Pulls",
             value: `${metrics.avoidedPulls}`,
-            sub: "Replenishment met from city inventory",
+            sub: "Demand fulfilled through city inventory",
+            key: "avoided" as const,
           },
           {
             label: "Human Intervention Rate",
             value: `${metrics.interventionRate}%`,
-            sub: "Recommendations needing manual action",
+            sub: "Recommendations requiring manual action",
+            key: "intervention" as const,
           },
         ].map((m) => (
-          <div key={m.label}>
+          <button
+            key={m.label}
+            type="button"
+            onClick={() => setMetric(m.key)}
+            className="-m-2 rounded-xl p-2 text-left transition-colors hover:bg-surface-2"
+          >
             <p className="text-xs uppercase tracking-wider text-muted-foreground">{m.label}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">{m.value}</p>
             <p className="text-xs text-muted-foreground">{m.sub}</p>
-          </div>
+          </button>
         ))}
         <p className="text-[11px] text-muted-foreground sm:col-span-3">
           Demo metrics from synthetic data · prototype decision rules, not production ML.
@@ -207,6 +221,7 @@ function Overview() {
           <ActivityFeed limit={6} />
         </div>
       </section>
+      <MetricDrawer metric={metric} onClose={() => setMetric(null)} />
     </div>
   );
 }
