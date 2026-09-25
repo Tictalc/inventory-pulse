@@ -1,11 +1,23 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 import {
+  historicalRecs,
   initialRows,
   initialWarehouse,
+  seedTransfers,
   type InventoryRow,
+  type TransferRecord,
 } from "./data";
-import { buildAll, sortOpportunities, storeById, type Opportunity } from "./engine";
+import {
+  buildAll,
+  interventionTier,
+  rightPlaceStats,
+  sortOpportunities,
+  storeById,
+  type ActionKind,
+  type Confidence,
+  type Opportunity,
+} from "./engine";
 
 export type ActivityItem = {
   id: string;
@@ -13,6 +25,9 @@ export type ActivityItem = {
   title: string;
   detail: string;
   at: string;
+  rowId?: string;
+  recKind?: ActionKind;
+  confidence?: Confidence;
 };
 
 export type Status = "open" | "resolved" | "escalated" | "dismissed";
@@ -24,6 +39,8 @@ type Ctx = {
   activity: ActivityItem[];
   warehouse: Record<string, number>;
   avoidedPulls: number;
+  transfers: TransferRecord[];
+  intervention: { auto: number; assisted: number; manual: number; total: number; rate: number };
   metrics: { rightPlace: number; avoidedPulls: number; interventionRate: number };
   selected: Opportunity | null;
   select: (rowId: string | null) => void;
@@ -35,7 +52,6 @@ type Ctx = {
 
 const CopilotContext = createContext<Ctx | null>(null);
 
-const BASE_AVOIDED = 6;
 const now = () =>
   new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -45,7 +61,8 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [avoidedPulls, setAvoidedPulls] = useState(BASE_AVOIDED);
+  const [transfers, setTransfers] = useState<TransferRecord[]>(seedTransfers);
+  const avoidedPulls = transfers.length;
 
   const opportunities = useMemo(() => buildAll(rows, warehouse), [rows, warehouse]);
   const priority = useMemo(
@@ -83,8 +100,24 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
             return r;
           }),
         );
-        setAvoidedPulls((n) => n + 1);
+        setTransfers((prev) => [
+          {
+            id: `live-${Date.now()}`,
+            productName: opp.product.name,
+            sourceStore: storeById(rec.sourceStoreId!).name,
+            destStore: opp.storeName,
+            units: rec.qty,
+            when: `Today ${now()} · just executed`,
+            coverBefore: opp.metrics.cover,
+            coverAfter: rec.coverAfter,
+            live: true,
+          },
+          ...prev,
+        ]);
         log({
+          rowId: opp.rowId,
+          recKind: rec.kind,
+          confidence: rec.confidence,
           kind: "transfer",
           title: `${rec.qty} units transferred`,
           detail: `${storeById(rec.sourceStoreId).name} → ${opp.storeName} · ${opp.product.name}`,
@@ -102,6 +135,9 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
           [opp.product.id]: Math.max(0, (prev[opp.product.id] ?? 0) - rec.qty),
         }));
         log({
+          rowId: opp.rowId,
+          recKind: rec.kind,
+          confidence: rec.confidence,
           kind: "replenish",
           title: `${rec.qty} units replenished`,
           detail: `Warehouse → ${opp.storeName} · ${opp.product.name}`,
@@ -141,17 +177,27 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     setWarehouse(initialWarehouse);
     setStatuses({});
     setActivity([]);
-    setAvoidedPulls(BASE_AVOIDED);
+    setTransfers(seedTransfers);
     setSelectedId(null);
   }, []);
 
-  const metrics = useMemo(() => {
-    const healthy = opportunities.filter((o) => o.recommendation.kind === "none").length;
-    const rightPlace = Math.round((healthy / opportunities.length) * 100);
-    const manual = activity.filter((a) => a.kind !== "dismiss").length;
-    const interventionRate = Math.round(((12 + manual) / (52 + manual)) * 100);
-    return { rightPlace, avoidedPulls, interventionRate };
-  }, [opportunities, activity, avoidedPulls]);
+  const intervention = useMemo(() => {
+    const c = { ...historicalRecs };
+    for (const o of priority) c[interventionTier(o.recommendation.kind, o.recommendation.confidence)]++;
+    for (const a of activity)
+      if (a.recKind && a.confidence && a.kind !== "dismiss") c[interventionTier(a.recKind, a.confidence)]++;
+    const total = c.auto + c.assisted + c.manual;
+    return { ...c, total, rate: Math.round(((c.assisted + c.manual) / total) * 100) };
+  }, [priority, activity]);
+
+  const metrics = useMemo(
+    () => ({
+      rightPlace: rightPlaceStats(opportunities).pct,
+      avoidedPulls,
+      interventionRate: intervention.rate,
+    }),
+    [opportunities, avoidedPulls, intervention],
+  );
 
   const value: Ctx = {
     opportunities,
@@ -160,6 +206,8 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     activity,
     warehouse,
     avoidedPulls,
+    transfers,
+    intervention,
     metrics,
     selected,
     select: setSelectedId,
