@@ -152,6 +152,9 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     (opp: Opportunity) => {
       setStatuses((prev) => ({ ...prev, [opp.rowId]: "escalated" }));
       log({
+        rowId: opp.rowId,
+        recKind: opp.recommendation.kind,
+        confidence: opp.recommendation.confidence,
         kind: "escalate",
         title: "Supply constraint flagged",
         detail: `${opp.product.name} · ${opp.storeName}`,
